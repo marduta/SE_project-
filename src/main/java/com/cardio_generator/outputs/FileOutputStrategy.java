@@ -37,7 +37,7 @@ public class FileOutputStrategy implements OutputStrategy {
         try (PrintWriter out = new PrintWriter(
                 Files.newBufferedWriter(Paths.get(filePath), StandardOpenOption.CREATE, StandardOpenOption.APPEND))) {
             out.printf("Patient ID: %d, Timestamp: %d, Label: %s, Data: %s%n", patientId, timestamp, label, data);
-        } catch (Exception e) {
+        } catch (IOException e) { // Changed the generic Exception to more specific IOException because it covers file-related errors.
             System.err.println("Error writing to file " + filePath + ": " + e.getMessage());
         }
     }
