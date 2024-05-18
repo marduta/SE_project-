@@ -69,4 +69,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 -Student ID: 6355132
 
 ## UML Diagrams
-[uml_models](./uml_models)
+[uml_models](src/main/uml_models/)
