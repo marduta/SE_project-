@@ -25,12 +25,31 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 
+/** 
+ * This class allows the user to specify the number of patients that they want to see data being generated,
+ * and in which format they want to see it.
+ * So this data(ecg, bloodSaturation, bloodPressure etc.) and the format of the data is the resulting output.
+ * 
+ * @author Lara
+ * 
+*/
+
 public class HealthDataSimulator {
 
     private static int patientCount = 50; // Default number of patients
     private static ScheduledExecutorService scheduler;
     private static OutputStrategy outputStrategy = new ConsoleOutputStrategy(); // Default output strategy
     private static final Random random = new Random();
+
+/**
+ * It first parses the argument and gives the right response based on the category that the argument is in.
+ * Then initializes the scheduler.
+ * Finally, schedules tasks that generates data for ecg, bloodSaturation, bloodPressure etc. for each patient.
+ * 
+ * @param args is passed as a command line argument.
+ * 
+ * @throws IOException incase there is a file-related error in the main method.
+ */
 
     public static void main(String[] args) throws IOException {
 
@@ -43,6 +62,15 @@ public class HealthDataSimulator {
 
         scheduleTasksForPatients(patientIds);
     }
+
+    /**
+     * Parses through the argument to correctly categorize(help, patient count, output if none default) and give the right response.
+     * It is the first called method in the main method to catch exceptions that may occur.
+     * 
+     * @param args is arguments passed into the method to be sorted into categories.
+     * 
+     * @throws IOException incase there is a file-related error when creating a directory from output arguments that start with "file:"
+     */
 
     private static void parseArguments(String[] args) throws IOException {
         for (int i = 0; i < args.length; i++) {
@@ -105,6 +133,10 @@ public class HealthDataSimulator {
         }
     }
 
+    /**
+     * Provides a guide for command line argument options and shows how to run the program using these different options.
+    */
+
     private static void printHelp() {
         System.out.println("Usage: java HealthDataSimulator [options]");
         System.out.println("Options:");
@@ -122,6 +154,14 @@ public class HealthDataSimulator {
                 "  This command simulates data for 100 patients and sends the output to WebSocket clients connected to port 8080.");
     }
 
+    /**
+     * Initializes a list with a size of patientCount that contains patientIds(in an increasing order because of the for loop).
+     * 
+     * @param patientCount is used as a upper bound number for the loop.
+     * 
+     * @return the list that contains patientIds(from 1 to patientCount).
+     */
+
     private static List<Integer> initializePatientIds(int patientCount) {
         List<Integer> patientIds = new ArrayList<>();
         for (int i = 1; i <= patientCount; i++) {
@@ -129,6 +169,12 @@ public class HealthDataSimulator {
         }
         return patientIds;
     }
+
+    /**
+     * Initializes the data generators for the list of patients passed into the method.
+     * For every patient in the list, a task is scheduled that generates data for ecg, bloodSaturation, bloodPressure etc.
+     * @param patientIds the list that contains Ids for the patients that the tasks are going to be scheduled.
+     */
 
     private static void scheduleTasksForPatients(List<Integer> patientIds) {
         ECGDataGenerator ecgDataGenerator = new ECGDataGenerator(patientCount);
@@ -145,6 +191,13 @@ public class HealthDataSimulator {
             scheduleTask(() -> alertGenerator.generate(patientId, outputStrategy), 20, TimeUnit.SECONDS);
         }
     }
+
+    /**
+     * Creates a schedule that performs a task repeatedly in a time period with a given timeUnit.
+     * @param task
+     * @param period is the time between each repetition of the task.
+     * @param timeUnit
+     */
 
     private static void scheduleTask(Runnable task, long period, TimeUnit timeUnit) {
         scheduler.scheduleAtFixedRate(task, random.nextInt(5), period, timeUnit);
