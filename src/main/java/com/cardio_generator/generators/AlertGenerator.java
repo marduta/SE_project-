@@ -7,6 +7,7 @@ import com.cardio_generator.outputs.OutputStrategy;
  * This class generates alerts if the state of the patient's data is more or less then a certain threshold for a healthy person.
  * 
  * @author Lara
+ * @author Maria
  * 
  */
 public class AlertGenerator implements PatientDataGenerator {

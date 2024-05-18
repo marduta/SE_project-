@@ -12,6 +12,10 @@ public class Alert {
         this.timestamp = timestamp;
     }
 
+    
+    /** 
+     * @return String
+     */
     public String getPatientId() {
         return patientId;
     }
