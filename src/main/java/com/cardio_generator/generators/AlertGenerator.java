@@ -3,7 +3,12 @@ package com.cardio_generator.generators;
 import java.util.Random;
 
 import com.cardio_generator.outputs.OutputStrategy;
-
+/**
+ * This class generates alerts if the state of the patient's data is more or less then a certain threshold for a healthy person.
+ * 
+ * @author Lara
+ * 
+ */
 public class AlertGenerator implements PatientDataGenerator {
 
     public static final Random randomGenerator = new Random();
@@ -14,6 +19,15 @@ public class AlertGenerator implements PatientDataGenerator {
         alertStates = new boolean[patientCount + 1];
     }
 
+    /**
+     * This method takes the patientId and the outputStrategy and checks if the patient's state
+     * requires an alert being generated.
+     * If not, then it creates an alert that shows "resolved" as the data.
+     * If yes, then it creates an alert that shows "triggered" as the data.
+     * 
+     * @param patientId
+     * @param outputStrategy
+     */
     @Override
     public void generate(int patientId, OutputStrategy outputStrategy) {
         try {

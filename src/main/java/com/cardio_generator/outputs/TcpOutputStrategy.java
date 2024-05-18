@@ -6,12 +6,24 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.Executors;
 
+/**
+ * This class creates Tcp outputs. It listens a specific port for incoming connections
+ * and send messages to connected clients.
+ * 
+ * @author Lara
+ * 
+ */
 public class TcpOutputStrategy implements OutputStrategy {
 
     private ServerSocket serverSocket;
     private Socket clientSocket;
     private PrintWriter out;
 
+    /**
+     * This constructor, creates a TcpOutputStrategy instance that listens a specified port.
+     * 
+     * @param port The number to listen for incoming Tcp connections.
+     */
     public TcpOutputStrategy(int port) {
         try {
             serverSocket = new ServerSocket(port);
@@ -32,6 +44,15 @@ public class TcpOutputStrategy implements OutputStrategy {
         }
     }
 
+    /**
+     * This method takes the patientId, time, generated datatype and the data value itself,
+     * to print the output message in the Tcp format.
+     * 
+     * @param patientId
+     * @param timestamp
+     * @param label
+     * @param data
+     */
     @Override
     public void output(int patientId, long timestamp, String label, String data) {
         if (out != null) {

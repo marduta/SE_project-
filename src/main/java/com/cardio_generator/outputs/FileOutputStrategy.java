@@ -7,6 +7,13 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * This class creates File outputs in a specified directory.
+ * Every unique label corresponds to a different seperate file inside the base directory.
+ * 
+ * @author Lara
+ * 
+ */
 public class FileOutputStrategy implements OutputStrategy {
 
     // Changed variable name "BaseDirectory" to camelCase version "baseDirectory".
@@ -20,6 +27,15 @@ public class FileOutputStrategy implements OutputStrategy {
         this.baseDirectory = baseDirectory;
     }
 
+    /**
+     * This method takes the patientId, time, generated datatype and the data value itself,
+     * to print the output message in the file format based on the data label.
+     *
+     * @param patientId 
+     * @param timestamp 
+     * @param label
+     * @param data
+     */
     @Override
     public void output(int patientId, long timestamp, String label, String data) {
         try {
