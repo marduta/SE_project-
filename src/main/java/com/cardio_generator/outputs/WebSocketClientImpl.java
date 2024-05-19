@@ -19,6 +19,9 @@ public class WebSocketClientImpl extends WebSocketClient{
     private DataStorage dataStorage;
     private final boolean useJsonParsing;//flag indicating if JSON parsing is used
 
+    private final int maxReconnects;//max number of reconnection attempts
+    private final int maxRetries;// maximum number of retries for failed messages
+    private final long retryDelay;//delay between retries in milliseconds
     /**
      * Constructor that takes the DataStorage object, server URI, and a flag indicating whether JSON parsing should be used.
      *
@@ -27,10 +30,13 @@ public class WebSocketClientImpl extends WebSocketClient{
      * @param useJsonParsing A flag indicating whether the messages from the server are in JSON format.
      * @throws URISyntaxException If there's an error parsing the server URI.
      */
-    public WebSocketClientImpl (DataStorage dataStorage, String serverUri, boolean useJsonParsing) throws URISyntaxException{
+    public WebSocketClientImpl (DataStorage dataStorage, String serverUri, boolean useJsonParsing, int maxRetries, long retryDelay, int maxReconnects) throws URISyntaxException{
         super(new URI(serverUri));
         this.dataStorage = dataStorage;
         this.useJsonParsing = useJsonParsing;//set the flag
+        this.maxRetries = maxRetries;
+        this.retryDelay = retryDelay;
+        this.maxReconnects = maxReconnects;
     }
 
      /**
@@ -52,6 +58,8 @@ public class WebSocketClientImpl extends WebSocketClient{
     @Override
     public void onMessage (String message){
         System.out.println("Received message: " + message);
+        int retryCount = 0;//track number of retries
+        while (retryCount < maxRetries){
         try{
             if (useJsonParsing){
                 //parse the message as a JSON object
@@ -74,7 +82,7 @@ public class WebSocketClientImpl extends WebSocketClient{
                 String[] parts = message.split(",");
                 if (parts.length != 4){
                     System.err.println("Invalid message format: Expected 4 comma-separated values");
-                    return;
+                    continue;
                 }
 
                 try {
@@ -89,10 +97,25 @@ public class WebSocketClientImpl extends WebSocketClient{
                     System.err.println("Error parsing message data: " + e.getMessage());
                 }
             }
+            //if parsing is successful, break the loop
+            break;
         }
         catch (Exception e){
-            System.err.println("Error parsing message: " + e.getMessage());
+            System.err.println("Error parsing message (retry " + (retryCount + 1) + "): " + e.getMessage());
+            retryCount++;
         }
+
+        if(retryCount == maxRetries){
+            System.err.println("Failed to parse message after " + maxRetries + " retries");
+        }
+        else{
+            try {
+                Thread.sleep(retryDelay);//wait before retrying
+            } catch (InterruptedException ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
     }
 
     /**
@@ -114,7 +137,27 @@ public class WebSocketClientImpl extends WebSocketClient{
      */
     @Override
     public void onError (Exception e){
-        System.err.println("Error occured: " + e.getMessage());
+        System.err.println("Error during communication: " + e.getMessage());
+        int reconnectCount = 0;
+        while (reconnectCount < maxReconnects){
+            try {
+                this.close(); //close the existing connection 
+                Thread.sleep(retryDelay * (reconnectCount + 1));//increase delay between retries
+                this.connect(); 
+                System.out.println("Reconnected to the WebSocket server");
+                return;
+            } catch (Exception ex) {
+                System.err.println("Failed to reconnect attempt: " + (reconnectCount + 1));
+            }
+        }
+
+        System.err.println("Failed to reconnect after " + maxReconnects + " attempts");
+        System.out.println("Connection to server lost");
     }
+
+    public DataStorage getDataStorage() {
+       return dataStorage;
+    }
+
 }
 

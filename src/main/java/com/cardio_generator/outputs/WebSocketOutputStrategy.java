@@ -17,6 +17,12 @@ public class WebSocketOutputStrategy implements OutputStrategy {
 
     @Override
     public void output(int patientId, long timestamp, String label, String data) {
+        //ensure all field have values
+        if (patientId <=0 || label == null || label.isEmpty() || data==null || data.isEmpty()){
+            System.err.println("Error: Missing data fields. Patient ID, label and data must have valid values.");
+            return;
+        }
+        
         String message = String.format("%d,%d,%s,%s", patientId, timestamp, label, data);
         // Broadcast the message to all connected clients
         for (WebSocket conn : server.getConnections()) {
