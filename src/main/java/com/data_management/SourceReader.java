@@ -44,7 +44,7 @@ public class SourceReader implements DataReader {
         }
     }
 
-    private PatientRecord parseLine(String row) {
+    public PatientRecord parseLine(String row) {
         String[] columns = row.split(","); // Assuming the raw data is in CSV format.
         if(columns.length != 4) {
             return null;
@@ -56,5 +56,10 @@ public class SourceReader implements DataReader {
 
     return new PatientRecord(patientId, measurementValue, recordType, timestamp);
     }
-    
+
+    @Override
+    public void connect() throws IOException {} // Not used.
+
+    @Override
+    public void disconnect() {} // Not used.
 }
