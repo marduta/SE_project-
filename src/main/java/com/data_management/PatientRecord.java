@@ -1,5 +1,7 @@
 package com.data_management;
 
+import java.util.Collections;
+
 /**
  * Represents a single record of patient data at a specific point in time.
  * This class stores all necessary details for a single observation or

@@ -1,7 +1,9 @@
 package com.alerts;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.sound.midi.MidiChannel;
 
@@ -52,6 +54,10 @@ public class AlertGenerator {
             checkBloodPressureAlert(record);
         if (recordType.equalsIgnoreCase("BloodOxigenSaturation"))
             checkBloodSaturationAlert(record);
+        if (recordType.equalsIgnoreCase("ECG"))
+            checkECGAlert(record);
+
+        checkCombinedAlert(record);
     }
 
     private void checkBloodPressureAlert (PatientRecord record){
@@ -114,22 +120,60 @@ public class AlertGenerator {
         }
     }
    
+    
+    /** 
+     * @param record
+     */
     private void checkBloodSaturationAlert(PatientRecord record){
         checkLowSaturationAlert(record);
         checkRapidDropAlert(record);
     }
 
+    
+    
+    /** 
+     * Checks for low blood oxygen saturation and triggers an alert if needed
+     * @param record
+     */
     private void checkLowSaturationAlert (PatientRecord record){
         double saturation = record.getMeasurementValue();
         if (saturation < 92)
             triggerAlert(new Alert(String.valueOf(record.getPatientId()), "Blood Oxygen Saturation Below 92% (" + saturation + "%)", System.currentTimeMillis()));
     }
 
+    //stores boold oxygen saturation history for each patient
+    private Map<Integer, List<BloodSaturationReading>> saturationHistoryMap = new HashMap<>();
+    
+    
+    /** 
+     * Retrieves the blood oxygen saturation history for a specific patient 
+     * 
+     * @param patientId
+     * @return List<BloodSaturationReading>
+     */
+    private List<BloodSaturationReading> getBloodSaturationHistory(int patientId) {
+        List<BloodSaturationReading> history = saturationHistoryMap.get(patientId);
+        if (history == null) {
+          history = new ArrayList<>();
+          saturationHistoryMap.put(patientId, history);
+        }
+        return history;
+      }
+
+      
+    
+    /** 
+     *Checks for rapid drops in blood oxygen saturation
+     *within 10min and triggers an alert if needed 
+     *
+     * @param record
+     */
     private void checkRapidDropAlert(PatientRecord record){
         //maintain a history of readings with timestamps
         List<BloodSaturationReading> saturationHistory = getBloodSaturationHistory(record.getPatientId());
         if (saturationHistory.isEmpty()){
             //no history, add current reading and skip rapid drop check
+            double saturation = record.getMeasurementValue();
             saturationHistory.add(new BloodSaturationReading(saturation, record.getTimestamp()));
             return;
         }
@@ -138,7 +182,7 @@ public class AlertGenerator {
         long timeDifference = record.getTimestamp() - previousReading.getTimestamp();
         final int MINUTES10 = 600*1000;
         if (timeDifference <= MINUTES10){
-            double saturationDifference = record.getMeasurementValue() - previousReading.getMeasurementValue();
+            double saturationDifference = record.getMeasurementValue() - previousReading.getValue();
             double saturationDropPercent = (saturationDifference / previousReading.getValue()) * 100;
             if (saturationDropPercent >= 5)
                 triggerAlert(new Alert(String.valueOf(record.getPatientId()), "Blood Oxygen Saturation Rapid Drop By " + String.format("%.2f", saturationDropPercent) + "%", System.currentTimeMillis()));
@@ -150,6 +194,79 @@ public class AlertGenerator {
             saturationHistory.remove(0);//remove oldest reading if history is full
         saturationHistory.add(new BloodSaturationReading(record.getMeasurementValue(), record.getTimestamp()));
     }
+
+    //It is a single blood oxygen saturation reading with a value and timestamp
+    class BloodSaturationReading {
+        private double value;
+        private long timestamp;
+      
+        public BloodSaturationReading(double value, long timestamp) {
+          this.value = value;
+          this.timestamp = timestamp;
+        }
+      
+        public double getValue() {
+          return value;
+        }
+      
+        public long getTimestamp() {
+          return timestamp;
+        }
+      }
+
+      private void checkCombinedAlert(PatientRecord record){
+        double saturation = record.getMeasurementValue();
+        double systolic = Double.parseDouble(String.valueOf((int)saturation));
+        if (systolic < 90 && checkLowBloodOxygen(record)){
+            String condition = "Combined Alert: Hypotensive Systolic Blood Pressure";
+            triggerAlert(new Alert(String.valueOf(record.getPatientId()), condition, System.currentTimeMillis()));
+        }
+      }
+
+      private boolean checkLowBloodOxygen(PatientRecord record){
+        double saturation = record.getMeasurementValue();
+        return saturation < 92;
+      }
+
+      private void checkECGAlert (PatientRecord record){
+        final int windowSize = 10;
+        final double thresholdMultiplier = 1.5;
+        List<Double> ecgData = extractECGData(record);
+        List<Integer> abnormalPeakIndices = detectAbnormalPeaks(ecgData, windowSize, thresholdMultiplier);
+        if (!abnormalPeakIndices.isEmpty()){
+            String message = "ECG Data Alert: Abnormal Peaks Detected at indices: " + abnormalPeakIndices;
+            triggerAlert(new Alert(String.valueOf(record.getPatientId()), message, System.currentTimeMillis()));
+        }    
+    }
+
+    private List<Double> extractECGData(PatientRecord record){
+        List<Double> ecgDataPoints = new ArrayList<>();
+        
+        if (record.getRecordType().equalsIgnoreCase("ECG"))
+            ecgDataPoints.add(record.getMeasurementValue());
+
+        return ecgDataPoints;
+    }
+
+    private List<Integer> detectAbnormalPeaks (List<Double> ecgData, int windoSize, double thresholdMultiplier){
+        List<Integer> abnormalPeaks = new ArrayList<>();
+        double windowAverage = 0.0;
+        for (int i =0; i <ecgData.size(); i++){
+            //update window average
+            if (i <windoSize)
+                windowAverage += ecgData.get(i);
+            else{
+                windowAverage += ecgData.get(i) - ecgData.get(i - windoSize);
+                windowAverage /= windoSize;
+            }
+
+            //check for abnormal peaks
+            if (ecgData.get(i) > windowAverage * thresholdMultiplier)
+                abnormalPeaks.add(i);
+        }
+        return abnormalPeaks;
+    }
+      
     /**
      * Triggers an alert for the monitoring system. This method can be extended to
      * notify medical staff, log the alert, or perform other actions. The method
