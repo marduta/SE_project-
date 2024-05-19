@@ -1,8 +1,8 @@
 package com.data_management;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 import com.alerts.AlertGenerator;
 
@@ -20,7 +20,7 @@ public class DataStorage {
      * structure.
      */
     public DataStorage() {
-        this.patientMap = new HashMap<>();
+        this.patientMap = new ConcurrentHashMap<>();
     }
 
     /**
@@ -36,12 +36,8 @@ public class DataStorage {
      * @param timestamp        the time at which the measurement was taken, in
      *                         milliseconds since the Unix epoch
      */
-    public void addPatientData(int patientId, double measurementValue, String recordType, long timestamp) {
-        Patient patient = patientMap.get(patientId);
-        if (patient == null) {
-            patient = new Patient(patientId);
-            patientMap.put(patientId, patient);
-        }
+    public synchronized void addPatientData(int patientId, double measurementValue, String recordType, long timestamp) {
+        Patient patient = patientMap.computeIfAbsent(patientId, id -> new Patient(id));
         patient.addRecord(measurementValue, recordType, timestamp);
     }
 
