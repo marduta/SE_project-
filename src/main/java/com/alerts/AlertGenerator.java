@@ -5,8 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.sound.midi.MidiChannel;
-
 import com.data_management.DataStorage;
 import com.data_management.Patient;
 import com.data_management.PatientRecord;
@@ -77,7 +75,7 @@ public class AlertGenerator {
         //check for critical thresholds
         if (systolic > 180 || systolic < 90 || diastolic > 120 || diastolic < 60){
             String condition = "Blood Pressure Critical Threshold exceeded: Systolic= " + systolic + ", Diastolic= " + diastolic;
-            triggerAlert(new Alert(String.valueOf(record.getPatientId()), condition, System.currentTimeMillis()));
+            triggerAlert(new Alert(String.valueOf(record.getPatientId()), condition, System.currentTimeMillis()), true, false);
         }
     }
 
@@ -114,8 +112,9 @@ public class AlertGenerator {
                     trend = "Blood Pressure decreasing Trend";
              
         }
-            if (!trend.equals(""))
-            triggerAlert(new Alert(String.valueOf(record.getPatientId()), trend, System.currentTimeMillis()));
+            if (!trend.equals("")) {
+                triggerAlert(new Alert(String.valueOf(record.getPatientId()), trend, System.currentTimeMillis()), false, true);
+            }
             
         }
     }
@@ -138,7 +137,7 @@ public class AlertGenerator {
     private void checkLowSaturationAlert (PatientRecord record){
         double saturation = record.getMeasurementValue();
         if (saturation < 92)
-            triggerAlert(new Alert(String.valueOf(record.getPatientId()), "Blood Oxygen Saturation Below 92% (" + saturation + "%)", System.currentTimeMillis()));
+        triggerAlert(new Alert(String.valueOf(record.getPatientId()), "Blood Oxygen Saturation Below 92% (" + saturation + "%)", System.currentTimeMillis()), true, false);
     }
 
     //stores boold oxygen saturation history for each patient
@@ -184,8 +183,9 @@ public class AlertGenerator {
         if (timeDifference <= MINUTES10){
             double saturationDifference = record.getMeasurementValue() - previousReading.getValue();
             double saturationDropPercent = (saturationDifference / previousReading.getValue()) * 100;
-            if (saturationDropPercent >= 5)
-                triggerAlert(new Alert(String.valueOf(record.getPatientId()), "Blood Oxygen Saturation Rapid Drop By " + String.format("%.2f", saturationDropPercent) + "%", System.currentTimeMillis()));
+            if (saturationDropPercent >= 5) {
+                triggerAlert(new Alert(String.valueOf(record.getPatientId()), "Blood Oxygen Saturation Rapid Drop By " + String.format("%.2f", saturationDropPercent) + "%", System.currentTimeMillis()), true, true);
+            }
         }
 
         final int MAX_HISTORY_SIZE = 1000000; 
@@ -219,7 +219,7 @@ public class AlertGenerator {
         double systolic = Double.parseDouble(String.valueOf((int)saturation));
         if (systolic < 90 && checkLowBloodOxygen(record)){
             String condition = "Combined Alert: Hypotensive Systolic Blood Pressure";
-            triggerAlert(new Alert(String.valueOf(record.getPatientId()), condition, System.currentTimeMillis()));
+            triggerAlert(new Alert(String.valueOf(record.getPatientId()), condition, System.currentTimeMillis()), true, true);
         }
       }
 
@@ -235,7 +235,7 @@ public class AlertGenerator {
         List<Integer> abnormalPeakIndices = detectAbnormalPeaks(ecgData, windowSize, thresholdMultiplier);
         if (!abnormalPeakIndices.isEmpty()){
             String message = "ECG Data Alert: Abnormal Peaks Detected at indices: " + abnormalPeakIndices;
-            triggerAlert(new Alert(String.valueOf(record.getPatientId()), message, System.currentTimeMillis()));
+            triggerAlert(new Alert(String.valueOf(record.getPatientId()), message, System.currentTimeMillis()), true, true);
         }    
     }
 
@@ -280,5 +280,18 @@ public class AlertGenerator {
         System.out.println("Patient ID:" + alert.getPatientId());
         System.out.println("Description: " + alert.getCondition());
         System.out.println("Timestamp: " + alert.getTimestamp());
+    }
+
+    private void triggerAlert(Alert alert, boolean highPriority, boolean repeatAlert) {
+        IAlert decoratedAlert = alert;
+    
+        if (highPriority) {
+            decoratedAlert = new PriorityAlertDecorator(decoratedAlert, 1);
+        }
+        if (repeatAlert) {
+            decoratedAlert = new RepeatedAlertDecorator(decoratedAlert, 5);
+    
+        decoratedAlert.trigger();
+        }
     }
 }
